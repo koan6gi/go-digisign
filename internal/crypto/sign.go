@@ -17,7 +17,7 @@ import (
 
 type Signer interface {
 	GenCertAndKey() (*x509.Certificate, *rsa.PrivateKey, error)
-	Sign(data []byte, key *rsa.PrivateKey, cert *x509.Certificate) ([]byte, error)
+	Sign(data []byte, key *rsa.PrivateKey) ([]byte, error)
 	Verify(data []byte, signature []byte, cert *x509.Certificate) bool
 	CertToBytes(cert *x509.Certificate) []byte
 	KeyToBytes(key *rsa.PrivateKey) []byte
@@ -100,10 +100,11 @@ func (s *RSASigner) GenCertAndKey() (*x509.Certificate, *rsa.PrivateKey, error) 
 		}
 	}
 
+	s.serialNumber.Add(s.serialNumber, big.NewInt(1))
 	return cert, privateKey, nil
 }
 
-func (s *RSASigner) Sign(data []byte, key *rsa.PrivateKey, cert *x509.Certificate) ([]byte, error) {
+func (s *RSASigner) Sign(data []byte, key *rsa.PrivateKey) ([]byte, error) {
 	hashed := sha256.Sum256(data)
 	signature, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, hashed[:])
 	if err != nil {

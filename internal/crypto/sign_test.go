@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestSigner(t *testing.T) {
-	signature, err := signer.Sign(data, key, cert)
+	signature, err := signer.Sign(data, key)
 	if err != nil {
 		t.Errorf("%v,\n", err)
 	}
@@ -51,7 +51,6 @@ func TestSigner(t *testing.T) {
 	}
 	log.Println("bytes to key: success")
 
-
 	certPEM := signer.CertToBytes(cert)
 	log.Println("cert to bytes:\n", string(certPEM))
 
@@ -61,4 +60,3 @@ func TestSigner(t *testing.T) {
 	}
 	log.Println("bytes to key: success")
 }
-
