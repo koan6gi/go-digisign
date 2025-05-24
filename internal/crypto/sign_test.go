@@ -36,7 +36,7 @@ func TestSigner(t *testing.T) {
 
 	log.Println("create a digital sign: success")
 
-	if !signer.Verify(data, signature, cert) {
+	if err := signer.Verify(data, signature, cert); err != nil {
 		t.Errorf("%v,\n", err)
 	}
 
