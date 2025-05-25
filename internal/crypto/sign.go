@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
+	"errors"
 	"math/big"
 	"time"
 
@@ -23,21 +23,23 @@ type Signer interface {
 	KeyToBytes(key *rsa.PrivateKey) []byte
 	BytesToCert(data []byte) (*x509.Certificate, error)
 	BytesToKey(data []byte) (*rsa.PrivateKey, error)
+	IsCertValid(cert *x509.Certificate) bool
 }
 
 type CryptoError struct {
 	Type    int
 	Err     error
-	content string
+	Content string
 }
 
-func (e *CryptoError) Error() string { return e.content }
+func (e *CryptoError) Error() string { return e.Content }
+func (e *CryptoError) Unwrap() error { return e.Err }
 
-// types of crypto errors
 const (
 	GenKeyErr = iota
 	GenCertErr
 	SignErr
+	VerifyErr
 	DataErr
 )
 
@@ -49,15 +51,16 @@ type RSASigner struct {
 	duration     time.Duration
 }
 
-const rsaKeyLength = 2048
-
 func NewRSASigner() *RSASigner {
+	keyLength := config.KeyLength
+	duration := config.CertDuration
+
 	return &RSASigner{
 		serialNumber: big.NewInt(1),
 		organization: []string{config.Organization},
 		commonName:   config.CommonName,
-		keyLength:    rsaKeyLength,
-		duration:     365 * 24 * time.Hour,
+		keyLength:    keyLength,
+		duration:     duration,
 	}
 }
 
@@ -67,7 +70,7 @@ func (s *RSASigner) GenCertAndKey() (*x509.Certificate, *rsa.PrivateKey, error) 
 		return nil, nil, &CryptoError{
 			Type:    GenKeyErr,
 			Err:     err,
-			content: fmt.Sprint("can't create a rsa private key:", err),
+			Content: "failed to generate RSA private key",
 		}
 	}
 
@@ -80,7 +83,12 @@ func (s *RSASigner) GenCertAndKey() (*x509.Certificate, *rsa.PrivateKey, error) 
 		NotBefore: time.Now(),
 		NotAfter:  time.Now().Add(s.duration),
 		KeyUsage:  x509.KeyUsageDigitalSignature,
-		IsCA:      false,
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageClientAuth,
+			x509.ExtKeyUsageServerAuth,
+		},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
 	}
 
 	certDER, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &privateKey.PublicKey, privateKey)
@@ -88,15 +96,16 @@ func (s *RSASigner) GenCertAndKey() (*x509.Certificate, *rsa.PrivateKey, error) 
 		return nil, nil, &CryptoError{
 			Type:    GenCertErr,
 			Err:     err,
-			content: fmt.Sprint("can't create x509 cert:", err),
+			Content: "failed to create x509 certificate",
 		}
 	}
+
 	cert, err := x509.ParseCertificate(certDER)
 	if err != nil {
 		return nil, nil, &CryptoError{
 			Type:    GenCertErr,
 			Err:     err,
-			content: fmt.Sprint("can't parse der cert:", err),
+			Content: "failed to parse DER certificate",
 		}
 	}
 
@@ -105,22 +114,66 @@ func (s *RSASigner) GenCertAndKey() (*x509.Certificate, *rsa.PrivateKey, error) 
 }
 
 func (s *RSASigner) Sign(data []byte, key *rsa.PrivateKey) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, &CryptoError{
+			Type:    SignErr,
+			Err:     errors.New("empty data"),
+			Content: "data to sign cannot be empty",
+		}
+	}
+
 	hashed := sha256.Sum256(data)
 	signature, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, hashed[:])
 	if err != nil {
 		return nil, &CryptoError{
 			Type:    SignErr,
 			Err:     err,
-			content: fmt.Sprint("can't sign:", err),
+			Content: "failed to sign data",
 		}
 	}
 	return signature, nil
 }
 
 func (s *RSASigner) Verify(data []byte, signature []byte, cert *x509.Certificate) error {
+	if len(data) == 0 || len(signature) == 0 {
+		return &CryptoError{
+			Type:    VerifyErr,
+			Err:     errors.New("empty data or signature"),
+			Content: "data and signature cannot be empty",
+		}
+	}
+
+	if !s.IsCertValid(cert) {
+		return &CryptoError{
+			Type:    VerifyErr,
+			Err:     errors.New("certificate expired or not yet valid"),
+			Content: "certificate validation failed",
+		}
+	}
+
 	hashed := sha256.Sum256(data)
-	pubKey := cert.PublicKey.(*rsa.PublicKey)
-	return rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hashed[:], signature)
+	pubKey, ok := cert.PublicKey.(*rsa.PublicKey)
+	if !ok {
+		return &CryptoError{
+			Type:    VerifyErr,
+			Err:     errors.New("invalid public key type"),
+			Content: "certificate does not contain RSA public key",
+		}
+	}
+
+	if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hashed[:], signature); err != nil {
+		return &CryptoError{
+			Type:    VerifyErr,
+			Err:     err,
+			Content: "signature verification failed",
+		}
+	}
+	return nil
+}
+
+func (s *RSASigner) IsCertValid(cert *x509.Certificate) bool {
+	now := time.Now()
+	return now.After(cert.NotBefore) && now.Before(cert.NotAfter)
 }
 
 func (s *RSASigner) CertToBytes(cert *x509.Certificate) []byte {
@@ -138,26 +191,59 @@ func (s *RSASigner) KeyToBytes(key *rsa.PrivateKey) []byte {
 }
 
 func (s *RSASigner) BytesToCert(data []byte) (*x509.Certificate, error) {
+	if len(data) == 0 {
+		return nil, &CryptoError{
+			Type:    DataErr,
+			Err:     errors.New("empty data"),
+			Content: "certificate data cannot be empty",
+		}
+	}
+
 	block, _ := pem.Decode(data)
 	if block == nil || block.Type != "CERTIFICATE" {
 		return nil, &CryptoError{
 			Type:    DataErr,
-			Err:     nil,
-			content: fmt.Sprint("can't parse certificate"),
+			Err:     errors.New("invalid PEM block"),
+			Content: "failed to decode PEM block containing certificate",
 		}
 	}
 
-	return x509.ParseCertificate(block.Bytes)
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, &CryptoError{
+			Type:    DataErr,
+			Err:     err,
+			Content: "failed to parse certificate",
+		}
+	}
+	return cert, nil
 }
 
 func (s *RSASigner) BytesToKey(data []byte) (*rsa.PrivateKey, error) {
+	if len(data) == 0 {
+		return nil, &CryptoError{
+			Type:    DataErr,
+			Err:     errors.New("empty data"),
+			Content: "key data cannot be empty",
+		}
+	}
+
 	block, _ := pem.Decode(data)
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
 		return nil, &CryptoError{
 			Type:    DataErr,
-			Err:     nil,
-			content: fmt.Sprint("can't parse key"),
+			Err:     errors.New("invalid PEM block"),
+			Content: "failed to decode PEM block containing private key",
 		}
 	}
-	return x509.ParsePKCS1PrivateKey(block.Bytes)
+
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, &CryptoError{
+			Type:    DataErr,
+			Err:     err,
+			Content: "failed to parse private key",
+		}
+	}
+	return key, nil
 }
