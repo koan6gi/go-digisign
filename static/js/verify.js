@@ -6,11 +6,9 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        // Очищаем предыдущие результаты
         resultDiv.classList.add('hidden');
         verificationResult.innerHTML = '';
 
-        // Показываем индикатор загрузки
         const loadingIndicator = document.createElement('div');
         loadingIndicator.textContent = 'Проверяем подпись...';
         verificationResult.appendChild(loadingIndicator);
@@ -25,36 +23,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            // Читаем файлы
             const [signatureData, certData] = await Promise.all([
                 readFileAsText(signatureFile),
                 readFileAsText(certFile)
             ]);
 
-            // Создаем FormData
             const formData = new FormData();
             formData.append('data', originalFile);
             formData.append('signature', signatureData);
             formData.append('cert', certData);
 
-            // Отправляем запрос
             const response = await fetch('/api/verify', {
                 method: 'POST',
                 body: formData
             });
 
-            // Обрабатываем ответ
             const result = await response.json();
 
             if (!response.ok) {
                 throw new Error(result.error || 'Неизвестная ошибка');
             }
 
-            // Показываем успешный результат
             showSuccess(result.message || 'Подпись действительна');
 
         } catch (err) {
-            // Показываем ошибку
             showError(err.message);
             console.error('Ошибка проверки:', err);
         }

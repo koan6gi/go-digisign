@@ -155,16 +155,15 @@ h1 {
 
 #downloadSignature {
   display: inline-block;
-  margin: 15px auto; /* Центрируем кнопку */
-  max-width: 200px; /* Ограничиваем максимальную ширину */
-  width: 100%; /* Занимает всю доступную ширину */
-  box-sizing: border-box; /* Учитываем padding в ширине */
+  margin: 15px auto;
+  max-width: 200px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 #signatureInfo {
   margin-top: 15px;
-  text-align: left; /* Текст информации оставляем с выравниванием по левому краю */
-}
+  text-align: left; }
 
 /* ===== Утилиты ===== */
 .hidden {

@@ -41,7 +41,6 @@ type VerifyRequest struct {
 }
 
 func (r *Router) generateHandler(c *gin.Context) {
-	// Генерируем ключевую пару
 	cert, key, err := r.signer.GenCertAndKey()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -51,19 +50,15 @@ func (r *Router) generateHandler(c *gin.Context) {
 		return
 	}
 
-	// Конвертируем в PEM
 	certPEM := r.signer.CertToBytes(cert)
 	keyPEM := r.signer.KeyToBytes(key)
 
-	// Создаем zip-архив в памяти
 	buf := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buf)
 
-	// Добавляем файлы в архив
 	addFileToZip(zipWriter, "certificate.pem", certPEM)
 	addFileToZip(zipWriter, "private_key.pem", keyPEM)
 
-	// Закрываем архив
 	if err := zipWriter.Close(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Ошибка создания архива",
@@ -72,7 +67,6 @@ func (r *Router) generateHandler(c *gin.Context) {
 		return
 	}
 
-	// Отправляем архив пользователю
 	c.Header("Content-Type", "application/zip")
 	c.Header("Content-Disposition", "attachment; filename=credentials.zip")
 	c.Data(http.StatusOK, "application/zip", buf.Bytes())

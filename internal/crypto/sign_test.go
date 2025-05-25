@@ -62,21 +62,17 @@ func TestSigner(t *testing.T) {
 }
 
 func TestEndToEnd(t *testing.T) {
-    // 1. Генерируем тестовые данные
     testData := []byte("Test data for verification")
 
-    // 2. Подписываем данные
     signature, err := signer.Sign(testData, key)
     if err != nil {
         t.Fatalf("Sign failed: %v", err)
     }
 
-    // 3. Проверяем подпись
     if err := signer.Verify(testData, signature, cert); err != nil {
         t.Fatalf("Verify failed: %v", err)
     }
 
-    // 4. Меняем один байт в данных - проверка должна провалиться
     testData[0] ^= 0xFF
     if err := signer.Verify(testData, signature, cert); err == nil {
         t.Fatal("Verify should fail with modified data")

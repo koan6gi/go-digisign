@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        // Показываем загрузку
         form.appendChild(loader);
         loader.style.display = 'block';
         resultDiv.classList.add('hidden');
@@ -23,13 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            // Читаем файлы
             const [dataContent, keyContent] = await Promise.all([
                 readFileAsArrayBuffer(dataFile),
                 readFileAsText(keyFile)
             ]);
 
-            // Отправляем на сервер
             const formData = new FormData();
             formData.append('data', new Blob([dataContent]));
             formData.append('key', keyContent);
@@ -43,10 +40,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(await response.text());
             }
 
-            // Получаем подпись
             const { signature } = await response.json();
 
-            // Создаем и скачиваем файл
             const blob = new Blob([signature], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -57,7 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Показываем информацию
             signatureInfo.innerHTML = `
                 <p>Файл успешно подписан!</p>
                 <p>Размер подписи: ${signature.length} байт</p>
