@@ -1,24 +1,29 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('signForm');
     const resultDiv = document.getElementById('result');
-    const downloadBtn = document.getElementById('downloadSignature');
     const signatureInfo = document.getElementById('signatureInfo');
-
-    let currentSignature = null;
+    const loader = document.createElement('div');
+    loader.className = 'loader';
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
+
+        // Показываем загрузку
+        form.appendChild(loader);
+        loader.style.display = 'block';
+        resultDiv.classList.add('hidden');
 
         const dataFile = document.getElementById('dataFile').files[0];
         const keyFile = document.getElementById('keyFile').files[0];
 
         if (!dataFile || !keyFile) {
-            alert('Пожалуйста, выберите оба файла');
+            alert('Пожалуйста, выберите файл и приватный ключ');
+            loader.style.display = 'none';
             return;
         }
 
         try {
-            // Читаем файлы как ArrayBuffer
+            // Читаем файлы
             const [dataContent, keyContent] = await Promise.all([
                 readFileAsArrayBuffer(dataFile),
                 readFileAsText(keyFile)
@@ -34,27 +39,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: formData
             });
 
-            if (response.ok) {
-                const { signature } = await response.json();
-                currentSignature = signature;
-
-                // Показываем результат
-                signatureInfo.innerHTML = `
-                    <p>Файл успешно подписан!</p>
-                    <p>Размер подписи: ${signature.length} байт</p>
-                `;
-                resultDiv.classList.remove('hidden');
-
-                // Настраиваем кнопку скачивания
-                downloadBtn.href = URL.createObjectURL(new Blob([signature], { type: 'application/octet-stream' }));
-                downloadBtn.download = 'signature.sig';
-            } else {
-                const error = await response.json();
-                throw new Error(error.details || error.error);
+            if (!response.ok) {
+                throw new Error(await response.text());
             }
+
+            // Получаем подпись
+            const { signature } = await response.json();
+
+            // Создаем и скачиваем файл
+            const blob = new Blob([signature], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${dataFile.name}.sig`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Показываем информацию
+            signatureInfo.innerHTML = `
+                <p>Файл успешно подписан!</p>
+                <p>Размер подписи: ${signature.length} байт</p>
+            `;
+            resultDiv.classList.remove('hidden');
+
         } catch (err) {
-            alert(`Ошибка: ${err.message}`);
+            alert('Ошибка: ' + err.message);
             console.error(err);
+        } finally {
+            loader.style.display = 'none';
         }
     });
 

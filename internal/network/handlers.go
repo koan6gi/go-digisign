@@ -1,6 +1,8 @@
 package network
 
 import (
+	"archive/zip"
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -39,47 +41,50 @@ type VerifyRequest struct {
 }
 
 func (r *Router) generateHandler(c *gin.Context) {
+	// Генерируем ключевую пару
 	cert, key, err := r.signer.GenCertAndKey()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to generate certificate and key",
+			"error":   "Ошибка генерации ключей",
 			"details": err.Error(),
 		})
 		return
 	}
 
-	currentCert = cert
-	currentKey = key
+	// Конвертируем в PEM
+	certPEM := r.signer.CertToBytes(cert)
+	keyPEM := r.signer.KeyToBytes(key)
 
-	c.JSON(http.StatusOK, GenerateResponse{
-		Status: "Certificate and key generated successfully",
-	})
-}
+	// Создаем zip-архив в памяти
+	buf := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(buf)
 
-func (r *Router) downloadCertHandler(c *gin.Context) {
-	if currentCert == nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"error": "No certificate generated yet",
+	// Добавляем файлы в архив
+	addFileToZip(zipWriter, "certificate.pem", certPEM)
+	addFileToZip(zipWriter, "private_key.pem", keyPEM)
+
+	// Закрываем архив
+	if err := zipWriter.Close(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Ошибка создания архива",
+			"details": err.Error(),
 		})
 		return
 	}
 
-	certPEM := r.signer.CertToBytes(currentCert)
-	c.Header("Content-Disposition", "attachment; filename=certificate.pem")
-	c.Data(http.StatusOK, "application/x-pem-file", certPEM)
+	// Отправляем архив пользователю
+	c.Header("Content-Type", "application/zip")
+	c.Header("Content-Disposition", "attachment; filename=credentials.zip")
+	c.Data(http.StatusOK, "application/zip", buf.Bytes())
 }
 
-func (r *Router) downloadKeyHandler(c *gin.Context) {
-	if currentKey == nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"error": "No key generated yet",
-		})
-		return
+func addFileToZip(zipWriter *zip.Writer, filename string, data []byte) error {
+	writer, err := zipWriter.Create(filename)
+	if err != nil {
+		return err
 	}
-
-	keyPEM := r.signer.KeyToBytes(currentKey)
-	c.Header("Content-Disposition", "attachment; filename=private_key.pem")
-	c.Data(http.StatusOK, "application/x-pem-file", keyPEM)
+	_, err = writer.Write(data)
+	return err
 }
 
 func (r *Router) signHandler(c *gin.Context) {

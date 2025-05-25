@@ -27,11 +27,9 @@ func (r *Router) setupRoutes() {
 	r.engine.StaticFile("/sign", "./static/sign.html")
 	r.engine.StaticFile("/verify", "./static/verify.html")
 
-	r.engine.POST("/api/generate", r.generateHandler)
+	r.engine.GET("/api/generate", r.generateHandler)
 	r.engine.POST("/api/sign", r.signHandler)
 	r.engine.POST("/api/verify", r.verifyHandler)
-	r.engine.GET("/download/cert", r.downloadCertHandler)
-	r.engine.GET("/download/key", r.downloadKeyHandler)
 }
 
 func (r *Router) Run(addr string) error {
