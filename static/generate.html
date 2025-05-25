@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генерация сертификата</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Генерация сертификата и ключа</h1>
+        <a href="/" class="back-btn">← На главную</a>
+
+        <button id="generate" class="btn">Сгенерировать</button>
+
+        <div class="download-buttons">
+            <a href="/download/cert" class="btn" id="downloadCert" disabled>Скачать сертификат</a>
+            <a href="/download/key" class="btn" id="downloadKey" disabled>Скачать ключ</a>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

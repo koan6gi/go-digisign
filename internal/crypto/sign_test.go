@@ -29,14 +29,14 @@ func TestMain(m *testing.M) {
 }
 
 func TestSigner(t *testing.T) {
-	signature, err := signer.Sign(data, key, cert)
+	signature, err := signer.Sign(data, key)
 	if err != nil {
 		t.Errorf("%v,\n", err)
 	}
 
 	log.Println("create a digital sign: success")
 
-	if !signer.Verify(data, signature, cert) {
+	if err := signer.Verify(data, signature, cert); err != nil {
 		t.Errorf("%v,\n", err)
 	}
 
@@ -51,7 +51,6 @@ func TestSigner(t *testing.T) {
 	}
 	log.Println("bytes to key: success")
 
-
 	certPEM := signer.CertToBytes(cert)
 	log.Println("cert to bytes:\n", string(certPEM))
 
@@ -62,3 +61,24 @@ func TestSigner(t *testing.T) {
 	log.Println("bytes to key: success")
 }
 
+func TestEndToEnd(t *testing.T) {
+    // 1. Генерируем тестовые данные
+    testData := []byte("Test data for verification")
+
+    // 2. Подписываем данные
+    signature, err := signer.Sign(testData, key)
+    if err != nil {
+        t.Fatalf("Sign failed: %v", err)
+    }
+
+    // 3. Проверяем подпись
+    if err := signer.Verify(testData, signature, cert); err != nil {
+        t.Fatalf("Verify failed: %v", err)
+    }
+
+    // 4. Меняем один байт в данных - проверка должна провалиться
+    testData[0] ^= 0xFF
+    if err := signer.Verify(testData, signature, cert); err == nil {
+        t.Fatal("Verify should fail with modified data")
+    }
+}
