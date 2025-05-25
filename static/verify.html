@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проверка подписи</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Проверка подписи</h1>
+        <a href="/" class="back-btn">← На главную</a>
+
+        <form id="verifyForm">
+            <div class="form-group">
+                <label for="originalFile">Исходный файл:</label>
+                <input type="file" id="originalFile" required>
+            </div>
+
+            <div class="form-group">
+                <label for="signatureFile">Файл подписи:</label>
+                <input type="file" id="signatureFile" required>
+            </div>
+
+            <div class="form-group">
+                <label for="certFile">Сертификат (PEM):</label>
+                <input type="file" id="certFile" accept=".pem,.crt" required>
+            </div>
+
+            <button type="submit" class="btn">Проверить</button>
+        </form>
+
+        <div id="result" class="hidden">
+            <h3>Результат проверки:</h3>
+            <div id="verificationResult"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/verify.js"></script>
+</body>
+</html>

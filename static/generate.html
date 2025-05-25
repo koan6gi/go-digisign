@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генерация ключей</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #downloadMessage {
+            display: none;
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Генерация ключевой пары</h1>
+        <a href="/" class="back-btn">← На главную</a>
+
+        <div class="card">
+            <p>При нажатии кнопки будет сгенерирована и сразу скачана ключевая пара:</p>
+            <ul>
+                <li>certificate.pem - ваш сертификат</li>
+                <li>private_key.pem - приватный ключ (храните в секрете!)</li>
+            </ul>
+
+            <button id="generateBtn" class="btn">Сгенерировать и скачать</button>
+            <div id="loader" class="loader"></div>
+
+            <div id="downloadMessage">
+                <p>✅ Файлы успешно скачаны</p>
+                <p><small>Если скачивание не началось, <a href="#" id="manualDownload">нажмите сюда</a></small></p>
+            </div>
+
+            <div class="warning">
+                <strong>Внимание!</strong> Сгенерированные ключи не хранятся на сервере.
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/generate.js"></script>
+</body>
+</html>
