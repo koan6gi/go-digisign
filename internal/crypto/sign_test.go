@@ -42,19 +42,19 @@ func TestSigner(t *testing.T) {
 
 	log.Println("verify a digital sign: success")
 
-	keyPEM := signer.KeyToBytes(key)
+	keyPEM := signer.KeyMarshal(key)
 	log.Println("key to bytes:\n", string(keyPEM))
 
-	_, err = signer.BytesToKey(keyPEM)
+	_, err = signer.KeyUnmarshal(keyPEM)
 	if err != nil {
 		t.Errorf("%v,\n", err)
 	}
 	log.Println("bytes to key: success")
 
-	certPEM := signer.CertToBytes(cert)
+	certPEM := signer.CertMarshal(cert)
 	log.Println("cert to bytes:\n", string(certPEM))
 
-	_, err = signer.BytesToCert(certPEM)
+	_, err = signer.CertUnmarshal(certPEM)
 	if err != nil {
 		t.Errorf("%v,\n", err)
 	}
@@ -62,19 +62,19 @@ func TestSigner(t *testing.T) {
 }
 
 func TestEndToEnd(t *testing.T) {
-    testData := []byte("Test data for verification")
+	testData := []byte("Test data for verification")
 
-    signature, err := signer.Sign(testData, key)
-    if err != nil {
-        t.Fatalf("Sign failed: %v", err)
-    }
+	signature, err := signer.Sign(testData, key)
+	if err != nil {
+		t.Fatalf("Sign failed: %v", err)
+	}
 
-    if err := signer.Verify(testData, signature, cert); err != nil {
-        t.Fatalf("Verify failed: %v", err)
-    }
+	if err := signer.Verify(testData, signature, cert); err != nil {
+		t.Fatalf("Verify failed: %v", err)
+	}
 
-    testData[0] ^= 0xFF
-    if err := signer.Verify(testData, signature, cert); err == nil {
-        t.Fatal("Verify should fail with modified data")
-    }
+	testData[0] ^= 0xFF
+	if err := signer.Verify(testData, signature, cert); err == nil {
+		t.Fatal("Verify should fail with modified data")
+	}
 }

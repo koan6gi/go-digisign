@@ -50,8 +50,8 @@ func (r *Router) generateHandler(c *gin.Context) {
 		return
 	}
 
-	certPEM := r.signer.CertToBytes(cert)
-	keyPEM := r.signer.KeyToBytes(key)
+	certPEM := r.signer.CertMarshal(cert)
+	keyPEM := r.signer.KeyMarshal(key)
 
 	buf := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buf)
@@ -112,7 +112,7 @@ func (r *Router) signHandler(c *gin.Context) {
 	hash := hasher.Sum(nil)
 
 	keyContent := c.PostForm("key")
-	key, err := r.signer.BytesToKey([]byte(keyContent))
+	key, err := r.signer.KeyUnmarshal([]byte(keyContent))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Неверный формат приватного ключа",
@@ -192,7 +192,7 @@ func (r *Router) verifyHandler(c *gin.Context) {
 	}
 
 	certContent := c.PostForm("cert")
-	cert, err := r.signer.BytesToCert([]byte(certContent))
+	cert, err := r.signer.CertUnmarshal([]byte(certContent))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Неверный формат сертификата",

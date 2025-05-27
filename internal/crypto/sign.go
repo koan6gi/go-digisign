@@ -19,10 +19,10 @@ type Signer interface {
 	GenCertAndKey() (*x509.Certificate, *rsa.PrivateKey, error)
 	Sign(data []byte, key *rsa.PrivateKey) ([]byte, error)
 	Verify(data []byte, signature []byte, cert *x509.Certificate) error
-	CertToBytes(cert *x509.Certificate) []byte
-	KeyToBytes(key *rsa.PrivateKey) []byte
-	BytesToCert(data []byte) (*x509.Certificate, error)
-	BytesToKey(data []byte) (*rsa.PrivateKey, error)
+	CertMarshal(cert *x509.Certificate) []byte
+	KeyMarshal(key *rsa.PrivateKey) []byte
+	CertUnmarshal(data []byte) (*x509.Certificate, error)
+	KeyUnmarshal(data []byte) (*rsa.PrivateKey, error)
 	IsCertValid(cert *x509.Certificate) bool
 }
 
@@ -176,21 +176,21 @@ func (s *RSASigner) IsCertValid(cert *x509.Certificate) bool {
 	return now.After(cert.NotBefore) && now.Before(cert.NotAfter)
 }
 
-func (s *RSASigner) CertToBytes(cert *x509.Certificate) []byte {
+func (s *RSASigner) CertMarshal(cert *x509.Certificate) []byte {
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert.Raw,
 	})
 }
 
-func (s *RSASigner) KeyToBytes(key *rsa.PrivateKey) []byte {
+func (s *RSASigner) KeyMarshal(key *rsa.PrivateKey) []byte {
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
 }
 
-func (s *RSASigner) BytesToCert(data []byte) (*x509.Certificate, error) {
+func (s *RSASigner) CertUnmarshal(data []byte) (*x509.Certificate, error) {
 	if len(data) == 0 {
 		return nil, &CryptoError{
 			Type:    DataErr,
@@ -219,7 +219,7 @@ func (s *RSASigner) BytesToCert(data []byte) (*x509.Certificate, error) {
 	return cert, nil
 }
 
-func (s *RSASigner) BytesToKey(data []byte) (*rsa.PrivateKey, error) {
+func (s *RSASigner) KeyUnmarshal(data []byte) (*rsa.PrivateKey, error) {
 	if len(data) == 0 {
 		return nil, &CryptoError{
 			Type:    DataErr,
